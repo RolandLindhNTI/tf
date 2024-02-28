@@ -1,0 +1,9 @@
+h1 Alla annonser
+
+
+ol
+  - advertisement.each do |advert|
+    li 
+      a href="advertisement/#{advert['id']}" #{advert["title"]}
+      form method="POST" action="advertisement/#{advert['id']}/delete"
+        input type="submit" value="Delete"
