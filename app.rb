@@ -4,12 +4,44 @@ require "sqlite3"
 require "sinatra/reloader"
 require 'bcrypt'
 
+enable :sessions
+
 get('/') do
     slim(:start)
 end
 
 get('/register') do
     slim(:"/user/register")
+end
+
+get('/login') do
+    slim(:"/user/login")
+end
+
+post('/login') do 
+    username = params[:username]
+    password = params[:password]
+    db = SQLite3::Database.new('db/plocket.db')
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM user WHERE username = ?",username).first
+    password_digest = result["pwdgst"]
+    id = result["id"]
+
+    if BCrypt::Password.new(password_digest) == password
+        session[:id] = id
+        redirect('/myannonser')
+    else
+        "Fel lösenord"
+    end
+end
+
+get('/myannonser') do
+    id = session[:id].to_i
+    db = SQLite3::Database.new('db/plocket.db')
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM advertisement WHERE user_id = ? ",id)
+    p "Alla adverts #{result}"
+    slim(:"advertisement/personal_index",locals:{advertisement:result})
 end
 
 post("/users/new") do
@@ -53,7 +85,7 @@ post('/advertisement/:id/update') do
     user_id = params[:user_id].to_i
     db = SQLite3::Database.new("db/plocket.db")
     db.execute("UPDATE advertisement SET title=?,description=?,price=?,user_id=? WHERE id = ?",title,description,price,user_id,id)
-    redirect('/annonser')
+    redirect('/myannonser')
 end
 
 get('/advertisement/:id/edit') do
@@ -81,7 +113,7 @@ post('/advertisement/new') do
     title = params[:title]
     description = params[:description]
     price = params[:price]
-    user_id = params[:user_id].to_i
+    user_id = session[:id].to_i
     db = SQLite3::Database.new("db/plocket.db")
     db.execute("INSERT INTO advertisement (title, description, price, user_id) VALUES(?,?,?,?)",title, description, price, user_id) #hur kopplas användar id?
     redirect(:"/annonser")
