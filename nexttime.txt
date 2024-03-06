@@ -1,9 +1,19 @@
-1. Se till så att alla onödiga flickar försvinner när man loggar in. T.ex registrera ska inte synas.
+1. Se till så att alla onödiga flickar försvinner när man loggar in. T.ex registrera ska inte synas. (KLAR)
 
-2. Fixa logga ut funktion
+2. Fixa logga ut funktion (KLAR)
 
 3. Lägg till genrer och fixa lite med ad_category_relation tabellen!!!
 
 4. Lägg till mer funktionalitet
 
 5. orkar inte skriva mer för idag lägg till och ta bort när du kommer på saker 
+
+6. VALIDERING
+
+
+
+Admin ska kunna ändra genrer på annonser,
+Admin ska kunna lägga till genrer
+Man ska kunna filtrera annonser med hjälp av genrer
+VALIDERING
+ad_category_relation tabell
