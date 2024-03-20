@@ -2,4 +2,12 @@ form action="/advertisement/new" method="post"
     input type="text" name="title" placeholder="Titel på annonsen"
     input type="text" name="description" placeholder="Beskriv annonsen"
     input type="text" name="price" placeholder="Sätt ett pris"
+    select name="genre"
+        - category.each do |genre|  
+            option value="#{genre['id']}" #{genre["name"]}
+    select name="genre"
+        - category.each do |genre|  
+            option value="#{genre['id']}" #{genre["name"]}
     input type="submit" value="Skapa annons"
+
+    

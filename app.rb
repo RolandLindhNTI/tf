@@ -107,16 +107,23 @@ get('/advertisement/:id') do
 end
 
 get('/annonser/new') do
-    slim(:"advertisement/new")
+    db = database()
+    result = db.execute("SELECT * FROM category")
+    slim(:"advertisement/new",locals:{category:result})
 end
 
 post('/advertisement/new') do
     title = params[:title]
+    name = params[:name]
+    id = params[:id]
     description = params[:description]
     price = params[:price]
     user_id = session[:id].to_i
     db = database()
     db.execute("INSERT INTO advertisement (title, description, price, user_id) VALUES(?,?,?,?)",title, description, price, user_id) #hur kopplas användar id?
+    db.execute("INSERT INTO")
     redirect(:"/annonser")
 end
 
+#db.last_insert_rowid()
+#db.last_insert_row_id()
