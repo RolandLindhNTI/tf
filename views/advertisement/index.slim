@@ -1,8 +1,21 @@
 h1 Alla annonser
 
 
+
+form action="/annonser" method="get" 
+  select name="genre"
+    option value="0" Allt
+    - category.each do |genre|  
+        - if genre['id'] != 1 #Tar bort valet "inget"
+            option value="#{genre['id']}" #{genre["name"]}
+  input type="submit" value="Filtrera"  
+
 ol
-  - advertisement.each do |advert|
+  - advert_filter.each do |advert|
     li 
       a href="advertisement/#{advert['id']}" #{advert["title"]}
       br
+
+
+      
+      

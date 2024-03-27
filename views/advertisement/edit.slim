@@ -3,4 +3,11 @@ form action="/advertisement/#{result['id']}/update" method="post"
     input type="text" name="description" value="#{result['description']}"
     input type="text" name="price" value="#{result['price']}"
     input type="hidden" name="user_id" value="#{result['user_id']}"
+    select name="genre"
+        - category.each do |genre|
+            - if genre['id'] != 1  
+                option value="#{genre['id']}" #{genre["name"]}
+    select name="genre2"
+        - category.each do |genre|  
+            option value="#{genre['id']}" #{genre["name"]}
     input type="submit" value="Edit!"

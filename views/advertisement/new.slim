@@ -3,9 +3,10 @@ form action="/advertisement/new" method="post"
     input type="text" name="description" placeholder="Beskriv annonsen"
     input type="text" name="price" placeholder="Sätt ett pris"
     select name="genre"
-        - category.each do |genre|  
-            option value="#{genre['id']}" #{genre["name"]}
-    select name="genre"
+        - category.each do |genre|
+            - if genre['id'] != 1  
+                option value="#{genre['id']}" #{genre["name"]}
+    select name="genre2"
         - category.each do |genre|  
             option value="#{genre['id']}" #{genre["name"]}
     input type="submit" value="Skapa annons"

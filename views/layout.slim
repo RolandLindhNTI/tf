@@ -14,5 +14,8 @@ br
     br
     a href="/login" Logga in 
     br
+-if session[:tag] == "ADMIN"
+    a href="/admin" Admin Page 
+    br
 
 == yield 
