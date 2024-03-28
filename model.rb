@@ -151,7 +151,6 @@ require 'bcrypt'
             end
             forbidden_characters = [" ", ",", ":", ";", "?", "!", "]", "[", "&", "=", "}", "{", "%", "¤", "$", "#", "£", "'", "@", "ä", "å", "ö", "|", "<", ">", "+", "´", "*", "/"]
             forbidden_characters.each do |char|
-                p char
                 if username.include?(char)
                     flash[:notice] = "Ditt användarnamn får inte innehålla symboler som ?,!"
                     redirect('/')
