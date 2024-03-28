@@ -124,17 +124,21 @@ end
 # @param [Integer] genre2 The other genre
 get('/annonser') do
     genre = params[:genre].to_i
-    genre2 = params[:genre2].to_i
     db = database()
     result = db.execute("SELECT * FROM advertisement")
     result_genre = db.execute("SELECT * FROM category")
     if genre != 0 
+        puts "Genre is not 0. Genre: #{genre}"
         result_filter = db.execute("SELECT * FROM ((ad_category_relation 
             INNER JOIN advertisement ON ad_category_relation.ad_id = advertisement.id) 
             INNER JOIN category ON ad_category_relation.category_id = category.id)  
             WHERE category_id = ? OR category_id2 = ?",genre,genre)
+
+        puts "Result filter: #{result_filter.inspect}"
     else
-        result_filter = result
+        puts "Genre is 0. Fetching all advertisements."
+        result_filter = db.execute("SELECT * FROM ad_category_relation INNER JOIN advertisement on ad_category_relation.ad_id = advertisement.id")
+        puts "Result filter: #{result_filter.inspect}"
     end
     slim(:"advertisement/index",locals:{advertisement:result,category:result_genre,advert_filter:result_filter})
 end
@@ -187,6 +191,19 @@ get('/admin/advertisements') do
     result = db.execute("SELECT * FROM advertisement")
     slim(:"admin/admin_index",locals:{advertisement:result})
 end
+
+
+# Displays an advertisement for admin to view
+#
+# @param [Integer] id The id of the advertisement
+get('/admin/advertisement/:id') do
+    id = params[:id].to_i
+    db = database()
+    result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
+    result_user = db.execute("SELECT username FROM user WHERE id IN (SELECT user_id FROM advertisement WHERE id = ?)",id).first
+    slim(:"advertisement/show",locals:{result:result,result_user:result_user})
+end
+
 
 # Displays an admin only form to edit an advertisement
 #

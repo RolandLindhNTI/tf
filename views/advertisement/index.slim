@@ -10,10 +10,12 @@ form action="/annonser" method="get"
             option value="#{genre['id']}" #{genre["name"]}
   input type="submit" value="Filtrera"  
 
+
+
 ol
   - advert_filter.each do |advert|
     li 
-      a href="advertisement/#{advert['id']}" #{advert["title"]}
+      a href="advertisement/#{advert['ad_id']}" #{advert["title"]}
       br
 
 
