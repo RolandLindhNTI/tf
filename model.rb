@@ -1,3 +1,5 @@
+# Declares a new module
+#
 module Model
 
 require 'sinatra'
@@ -6,16 +8,29 @@ require 'slim'
 require 'sqlite3'
 require 'bcrypt'
 
+
+    # Help function to connect database
+    #
     def database()
         db = SQLite3::Database.new("db/plocket.db")
         db.results_as_hash = true
         return db
     end
 
+    # Help function to calculate the time dividing to arrays
+    #
+    # @param [Array] timeout_arr containing float values of times
+    # @return [Float] contains the decimal between two times
     def average_timeout(timeout_arr)
         return timeout_arr.sum/timeout_arr.size
     end
 
+    # Timeout function that counts the time between logins and redirects to '/login'
+    #
+    # @param [Array] timeout_arr containing float values of times
+    # @param :cooldown [Boolean] true or false
+    # @param :timecheck1 [Integer]  containing the time in float
+    #
     def timeout(timeout_arr)
         timeout_arr = timeout_arr.last(5)
         if timeout_arr.length == 5
@@ -33,15 +48,31 @@ require 'bcrypt'
         end
     end
 
-
+    # Help function that enables time
+    #
+    # @param :annonstime [Float] The time passed in float
     def annonstime()
         session[:annonstime] = Time.now
     end
+    
 
+    # Help function that enables time
+    #
+    # @param :regtime [Float] The time passed in float
     def regtime()
         session[:regtime] = Time.now
     end
 
+    # Function runs before every route, checks for bruteforcing and other malicious intents. Checks authorization for the user depending on the route. 
+    # Redirects to one of the following routes depending on the conditions met '/cooldown' '/register' '/'
+    #
+    # @param :cooldown [Boolean] true or false
+    # @param :timecheck2 [Float] Time given in float value
+    # @param :timecheck1 [Float] Time given in float value
+    # @param :timeout_arr [Array] containing time values in float
+    # @param :tag [String] tag for user permissions
+    # @param :id [Integer] the users id
+    #
     def before_all()
         if session[:cooldown] == true
             session[:timecheck2] = Time.now
@@ -69,33 +100,48 @@ require 'bcrypt'
         end
     end
 
+
+    # Allows the user to login and updates session for the user depending on the criterias met. Redirects to '/login' or '/'. Error-handling and bruteforce prevention.
+    # 
+    # 
+    # @param :timeout_arr [Array] containing time values in float
+    # @param :tag [String] tag for user permissions
+    # @param :id [Integer] the users id
+    # @param :notice [String] Feedback message to the user
+    # @param :username [String] The username
+    # @param :logintime
+    #
+    # @see Model#timeout
     def post_login(db,username,password)
         session[:timeout_arr] << Time.now
         timeout(session[:timeout_arr]) 
         result = db.execute("SELECT pwdgst FROM user WHERE username = ?",username).first
-        if session[:logintime].nil? || Time.now - session[:logintime] > 10
-            if result != nil && BCrypt::Password.new(result["pwdgst"]) == password
-                session[:id] = db.execute("SELECT id FROM user WHERE username = ?",username).first["id"]
-                session[:username] = username
-                if username == "ADMIN"
-                    session[:tag] = "ADMIN"
-                else
-                    session[:tag] = "USER"
-                end
+        if result != nil && BCrypt::Password.new(result["pwdgst"]) == password
+            session[:id] = db.execute("SELECT id FROM user WHERE username = ?",username).first["id"]
+            session[:username] = username
+            if username == "ADMIN"
+                session[:tag] = "ADMIN"
+            else
+                session[:tag] = "USER"
+            end
+                redirect('/')
             else
                 flash[:notice] = "Fel lösenord eller användarnamn"
                 redirect('/login')
-            end
-        else
-            flash[:notice] = "Du måste vänta längre innan du försöker igen"
-            redirect('/login')
         end
     end
 
-
+    # Creates a new user and checks uses error-handling to prevent misinputs in the database. Redirects to '/'
+    #
+    # @param :regtime [Float] Float value of time since last registration
+    # @param :notice [String] Feedback message to the user
+    # @param [String] char Containing each forbidden character one by one
+    # @param [String] password The users password
+    #
+    # @see Model#regtime
     def post_register(db,username,password,password_confirm,first_name,last_name,email)
 
-        if session[:regtime].nil? || Time.now - session[:regtime] > 20
+        if session[:regtime].nil? || Time.now - session[:regtime] > 20 #To lazy to change this to the new and improved timeout function
 
             compare_username = db.execute("SELECT username FROM user WHERE username LIKE ?",username).first
 
@@ -105,6 +151,7 @@ require 'bcrypt'
             end
             forbidden_characters = [" ", ",", ":", ";", "?", "!", "]", "[", "&", "=", "}", "{", "%", "¤", "$", "#", "£", "'", "@", "ä", "å", "ö", "|", "<", ">", "+", "´", "*", "/"]
             forbidden_characters.each do |char|
+                p char
                 if username.include?(char)
                     flash[:notice] = "Ditt användarnamn får inte innehålla symboler som ?,!"
                     redirect('/')
@@ -138,9 +185,15 @@ require 'bcrypt'
         end
     end
 
-    def post_advertcheck(title,description,price,id,user_id,genre,genre2,db)
+    # Creates a new advertisement, contains error handling for certain cases and redirects to '/' or '/annonser' depending on criterias.
+    #
+    # @param :annonstime [Float] Float value of time since last registration
+    # @param :notice [String] Feedback message to the user
+    #
+    # @see Model#annonstime
+    def post_advertcheck(title,description,price,user_id,genre,genre2,db)
 
-        if session[:annonstime].nil? || Time.now - session[:annonstime] > 5
+        if session[:annonstime].nil? || Time.now - session[:annonstime] > 5 #Lazy to update this one as well
 
             if title.length > 100
                 flash[:notice] = "Titeln är för lång"
@@ -176,9 +229,15 @@ require 'bcrypt'
         end
     end
 
+    # Creates a new advertisement, contains error handling for certain cases and redirects to '/' or '/myannonser'
+    #
+    # @param :annonstime [Float] Float value of time since last registration
+    # @param :notice [String] Feedback message to the user
+    #
+    # @see Model#annonstime
     def post_advertupdate(title,description,price,id,user_id,genre,genre2,db)
 
-        if session[:annonstime].nil? || Time.now - session[:annonstime] > 5
+        if session[:annonstime].nil? || Time.now - session[:annonstime] > 5 #Lazy to update
 
             if title.length > 100
                 flash[:notice] = "Titeln är för lång"
