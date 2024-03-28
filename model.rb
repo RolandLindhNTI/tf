@@ -11,6 +11,7 @@ require 'bcrypt'
 
     # Help function to connect database
     #
+    # @return [Hash] db, The database being returned
     def database()
         db = SQLite3::Database.new("db/plocket.db")
         db.results_as_hash = true
