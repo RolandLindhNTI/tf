@@ -13,8 +13,7 @@ include Model
 
 
 # Runs before every route is being ran, checks login cooldowns and authorization
-#
-# @param :timeout_arr [Array] containing float values of times 
+# 
 # @see Model#before_all    
 before do
     if session[:timeout_arr] == nil
@@ -41,8 +40,6 @@ end
 
 # Displays a logout message and clears sessions. Redirects the user to the landing page route '/'
 #
-# @param :id [Integer]
-# @param :notice [String] message
 get('/logout') do
     session[:id] = nil
     session.clear
@@ -58,18 +55,14 @@ end
 
 # Displays a register form
 #
-
 get('/register') do
     slim(:"/user/register")
 end
 
 # Displays a login form, redirects the user to the route '/cooldown' if conditions are met
 #
-# @param [Boolean] :cooldown True or false
 get('/login') do
-    if session[:cooldown] == true
-        redirect('/cooldown')
-    end
+    login_cooldown()
     slim(:"/user/login")
 end
 
@@ -89,12 +82,12 @@ end
 
 # Displays all the users advertisements
 #
-# @param [Integer] id The users id
+#
+# @see Model#personal_advertisement
 get('/myannonser') do
     id = session[:id].to_i
     db = database()
-    result = db.execute("SELECT * FROM advertisement WHERE user_id = ? ",id)
-    slim(:"advertisement/personal_index",locals:{advertisement:result})
+    personal_advertisement(id,db)
 end
 
 # Creates a new user and updates authorization and sessions for the newly created user
@@ -121,21 +114,12 @@ end
 # Displays every advertisement on the website, possible to filter advertisements based on genre.
 #
 # @param [Integer] genre The genre
-# @param [Integer] genre2 The other genre
+#
+# @see Model#get_advertisement
 get('/annonser') do
     genre = params[:genre].to_i
     db = database()
-    result = db.execute("SELECT * FROM advertisement")
-    result_genre = db.execute("SELECT * FROM category")
-    if genre != 0 
-        result_filter = db.execute("SELECT * FROM ((ad_category_relation 
-            INNER JOIN advertisement ON ad_category_relation.ad_id = advertisement.id) 
-            INNER JOIN category ON ad_category_relation.category_id = category.id)  
-            WHERE category_id = ? OR category_id2 = ?",genre,genre)
-    else
-        result_filter = db.execute("SELECT * FROM ad_category_relation INNER JOIN advertisement on ad_category_relation.ad_id = advertisement.id")
-    end
-    slim(:"advertisement/index",locals:{advertisement:result,category:result_genre,advert_filter:result_filter})
+    get_advertisement(genre,db)
 end
 
 # Updates an article
@@ -149,7 +133,6 @@ end
 # @param [Integer] user_id The users id
 #
 # @see Model#post_advertupdate
-
 post('/advertisement/:id/update') do
     id = params[:id].to_i
     genre = params[:genre].to_i
@@ -171,110 +154,98 @@ end
 # Creates a genre, updates the database and redirects to the route '/admin'
 # 
 # @param [String] name The name of the genre
+#
+# @see Model#post_admincategory
 post('/admin/create_genre') do
     name = params[:name]
     db = database()
-    db.execute("INSERT INTO category (name) VALUES(?)",name)
-    redirect(:"/admin")
+    post_admincategory(name,db)
 end
 
-# Displays every advertisement on the website
+# Displays every advertisement for the admin on the website
 # 
-#
+# @see Model#get_adminadvertisement
 get('/admin/advertisements') do
     db = database()
-    result = db.execute("SELECT * FROM advertisement")
-    slim(:"admin/admin_index",locals:{advertisement:result})
+    get_adminadvertisement(db)
 end
 
 
 # Displays an advertisement for admin to view
 #
 # @param [Integer] id The id of the advertisement
+#
+# @see Model#get_adminadvertisementid
 get('/admin/advertisement/:id') do
     id = params[:id].to_i
     db = database()
-    result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
-    result_user = db.execute("SELECT username FROM user WHERE id IN (SELECT user_id FROM advertisement WHERE id = ?)",id).first
-    slim(:"advertisement/show",locals:{result:result,result_user:result_user})
+    get_adminadvertisementid(id,db)
 end
 
 
 # Displays an admin only form to edit an advertisement
 #
 # @param [Integer] id The id of the advertisement
-
+#
+# @see Model#get_adminadvertisementedit
 get('/admin/advertisement/:id/edit') do
     id = params[:id].to_i
     db = database()
-    result_genre = db.execute("SELECT * FROM category")
-    result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
-    slim(:"/advertisement/edit",locals:{result:result,category:result_genre})
+    get_adminadvertisementedit(id,db)
 end
 
 # Removes an advertisement and redirects to the route '/annonser'
 #
 # @param [Integer] id The id of the advertisement
+#
+# @see Model#post_admindelete
 post('/admin/advertisement/:id/delete') do
     id = params[:id].to_i
     db = database()
-    db.execute("DELETE FROM advertisement WHERE id = ?",id)
-    db.execute("DELETE FROM ad_category_relation WHERE ad_id = ?",id)
-    redirect('/annonser')
+    post_admindelete(id,db)
 end
 
 # Removes an advertisement and redirects to the landing page route '/'.
 #
-# @param [Integer] user_id The id of the user
 # @param [Integer] id  The id of the advertisement
+#
+# @see Model#post_advertisementdelete
 post('/advertisement/:id/delete') do
     db = database()
     user_id = session[:id].to_i
     id = params[:id].to_i
-    user_advert_id = db.execute("SELECT user_id FROM advertisement WHERE id = ?", id).first
-    if user_advert_id.nil? || user_id != user_advert_id[0]
-        redirect('/')
-    end
-    db.execute("DELETE FROM advertisement WHERE id = ?",id)
-    db.execute("DELETE FROM ad_category_relation WHERE ad_id = ?",id)
-    redirect('/')
+    post_advertisementdelete(id,user_id,db)
 end
 
 # Displays a form to edit an advertisement
 #
-# @param [Integer] user_id The users id
 # @param [Integer] id The advertisement id
+#
+# @see Model#get_advertisementedit
 get('/advertisement/:id/edit') do
     db = database()
     user_id = session[:id].to_i
     id = params[:id].to_i
-    user_advert_id = db.execute("SELECT user_id FROM advertisement WHERE id = ?", id).first
-    if user_advert_id.nil? || user_id != user_advert_id[0]
-        redirect('/')
-    end
-    result_genre = db.execute("SELECT * FROM category")
-    result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
-    slim(:"/advertisement/edit",locals:{result:result,category:result_genre})
+    get_advertisementedit(id,db,user_id)
 end
 
 # Displays the a single advertisement
 # 
 # @param [Integer] id The advertisement id
+#
+# @see Model#get_advertisementid
 get('/advertisement/:id') do
     id = params[:id].to_i
     db = database()
-    result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
-    result_user = db.execute("SELECT username FROM user WHERE id IN (SELECT user_id FROM advertisement WHERE id = ?)",id).first
-    slim(:"advertisement/show",locals:{result:result,result_user:result_user})
+    get_advertisementid(id,db)
 end
 
 # Displays a form to create a new advertisement
 #
-#
+# @see Model#get_newadvertisement
 get('/annonser/new') do
     db = database()
-    result = db.execute("SELECT * FROM category")
-    slim(:"advertisement/new",locals:{category:result})
+    get_newadvertisement(db)
 end
 
 
@@ -288,7 +259,6 @@ end
 # @param [Integer] genre2 The other genre of the advertisement
 #
 # @see Model#post_advertcheck
-
 post('/advertisement/new') do
     title = params[:title]
     description = params[:description]

@@ -29,9 +29,6 @@ require 'bcrypt'
     # Timeout function that counts the time between logins and redirects to '/login'
     #
     # @param [Array] timeout_arr containing float values of times
-    # @param :cooldown [Boolean] true or false
-    # @param :timecheck1 [Integer]  containing the time in float
-    #
     def timeout(timeout_arr)
         timeout_arr = timeout_arr.last(5)
         if timeout_arr.length == 5
@@ -51,7 +48,6 @@ require 'bcrypt'
 
     # Help function that enables time
     #
-    # @param :annonstime [Float] The time passed in float
     def annonstime()
         session[:annonstime] = Time.now
     end
@@ -59,20 +55,12 @@ require 'bcrypt'
 
     # Help function that enables time
     #
-    # @param :regtime [Float] The time passed in float
     def regtime()
         session[:regtime] = Time.now
     end
 
     # Function runs before every route, checks for bruteforcing and other malicious intents. Checks authorization for the user depending on the route. 
     # Redirects to one of the following routes depending on the conditions met '/cooldown' '/register' '/'
-    #
-    # @param :cooldown [Boolean] true or false
-    # @param :timecheck2 [Float] Time given in float value
-    # @param :timecheck1 [Float] Time given in float value
-    # @param :timeout_arr [Array] containing time values in float
-    # @param :tag [String] tag for user permissions
-    # @param :id [Integer] the users id
     #
     def before_all()
         if session[:cooldown] == true
@@ -102,15 +90,13 @@ require 'bcrypt'
     end
 
 
+
     # Allows the user to login and updates session for the user depending on the criterias met. Redirects to '/login' or '/'. Error-handling and bruteforce prevention.
     # 
     # 
-    # @param :timeout_arr [Array] containing time values in float
-    # @param :tag [String] tag for user permissions
-    # @param :id [Integer] the users id
-    # @param :notice [String] Feedback message to the user
-    # @param :username [String] The username
-    # @param :logintime
+    # @param username [String] The username
+    # @param db [Hash] The database
+    # @param password [String] The password
     #
     # @see Model#timeout
     def post_login(db,username,password)
@@ -134,10 +120,13 @@ require 'bcrypt'
 
     # Creates a new user and checks uses error-handling to prevent misinputs in the database. Redirects to '/'
     #
-    # @param :regtime [Float] Float value of time since last registration
-    # @param :notice [String] Feedback message to the user
     # @param [String] char Containing each forbidden character one by one
     # @param [String] password The users password
+    # @param [Hash] db The database
+    # @param [String] password_confirm The password again
+    # @param [String] first_name The users first name
+    # @param [String] last_name The users last name
+    # @param [String] email The users email
     #
     # @see Model#regtime
     def post_register(db,username,password,password_confirm,first_name,last_name,email)
@@ -145,11 +134,40 @@ require 'bcrypt'
         if session[:regtime].nil? || Time.now - session[:regtime] > 20 #To lazy to change this to the new and improved timeout function
 
             compare_username = db.execute("SELECT username FROM user WHERE username LIKE ?",username).first
+            compare_email = db.execute("SELECT email FROM user WHERE email LIKE ?",email).first
 
-            if username.length > 16
+            if username.length < 3 || username.empty?
+                flash[:notice] = "Användarnmanet få  vara längre än 3 och inte tomt"
+                redirect('/')
+            elsif password.length > 30
+                flash[:notice] = "Lösernordet är för långt"
+                redirect('/')
+            elsif password.empty? || password.length < 7
+                flash[:notice] = "Skriv in ett lösernord"
+                redirect('/')
+            elsif first_name.empty? || first_name.length > 50
+                flash[:notice] = "Fyll i ditt namn"
+                redirect('/')
+            elsif last_name.empty? || last_name.length > 50
+                flash[:notice] = "Fyll i ditt efter namn"
+                redirect('/')
+            elsif compare_email != nil
+                flash[:notice] = "Mailen är redan använd"
+                redirect('/')
+            elsif username.length > 16
                 flash[:notice] = "Användarnamnet är för långt, max 16 karaktärer"
                 redirect('/')
+            elsif email.length > 320
+                flash[:notice] = "Din email är för lång, max 320 karaktärer"
+                redirect('/')
+            elsif !email.include?("@")
+                flash[:notice] = "Din mail måste innehålla domain @"
+                redirect('/')
+            elsif !email.include?(".com")
+                flash[:notice] = "Din mail måste innehålla .com"
+                redirect('/')
             end
+
             forbidden_characters = [" ", ",", ":", ";", "?", "!", "]", "[", "&", "=", "}", "{", "%", "¤", "$", "#", "£", "'", "@", "ä", "å", "ö", "|", "<", ">", "+", "´", "*", "/"]
             forbidden_characters.each do |char|
                 if username.include?(char)
@@ -157,26 +175,17 @@ require 'bcrypt'
                     redirect('/')
                 end
             end
-            
-            if email.length > 320
-                flash[:notice] = "Din email är för lång, max 320 karaktärer"
-                redirect('/')
-            end
-            if !email.include?("@")
-                flash[:notice] = "Din mail måste innehålla domain @"
-                redirect('/')
-            end
 
             if (password == password_confirm)
                 if compare_username == nil
                 password_digest = BCrypt::Password.create(password)
                 db.execute("INSERT INTO user (username,pwdgst,first_name,last_name,email) VALUES (?,?,?,?,?)",username,password_digest,first_name,last_name,email)
+                flash[:notice] = "Ditt konto har skapats"
                 end
             else
                 flash[:notice] = "Användarnamnet är upptaget eller så är lösenordet fel"
                 redirect('/')
             end
-            flash[:notice] = "Ditt konto har skapats"
             regtime()
             redirect('/')
         else
@@ -187,8 +196,13 @@ require 'bcrypt'
 
     # Creates a new advertisement, contains error handling for certain cases and redirects to '/' or '/annonser' depending on criterias.
     #
-    # @param :annonstime [Float] Float value of time since last registration
-    # @param :notice [String] Feedback message to the user
+    # @param [String] title The title of the advertisement
+    # @param [String] description The description of the advertisement
+    # @param [String] price The price of the advertisement
+    # @param [Integer] user_id The users id
+    # @param [Integer] genre Value of the genre selected
+    # @param [Integer] genre2 The value of genre2 selected
+    # @param [Hash] db The database 
     #
     # @see Model#annonstime
     def post_advertcheck(title,description,price,user_id,genre,genre2,db)
@@ -231,8 +245,14 @@ require 'bcrypt'
 
     # Creates a new advertisement, contains error handling for certain cases and redirects to '/' or '/myannonser'
     #
-    # @param :annonstime [Float] Float value of time since last registration
-    # @param :notice [String] Feedback message to the user
+    # @param [String] title The title of the advertisement
+    # @param [String] description The description of the advertisement
+    # @param [String] price The price of the advertisement
+    # @param [Integer] user_id The users id
+    # @param [Integer] id The advertisement id
+    # @param [Integer] genre Value of the genre selected
+    # @param [Integer] genre2 The value of genre2 selected
+    # @param [Hash] db The database 
     #
     # @see Model#annonstime
     def post_advertupdate(title,description,price,id,user_id,genre,genre2,db)
@@ -270,6 +290,147 @@ require 'bcrypt'
             flash[:notice] = "Du måste vänta längre innan du kan uppdatera din annons"
             redirect('/')
         end
+    end
+
+    # Redirects the user to '/cooldown' if the required criteria is met
+    #
+    def login_cooldown()
+        if session[:cooldown] == true
+            redirect('/cooldown')
+        end
+    end
+
+
+    # Creates a new category and checks if the category already exists. Redirects to admin page '/admin'
+    #
+    # @param [String] name The name of the category
+    # @param [Hash] db The database
+    def post_admincategory(name,db)
+        compare_category = db.execute("SELECT name FROM category WHERE name LIKE ?",name).first
+        if compare_category == nil
+        db.execute("INSERT INTO category (name) VALUES(?)",name)
+        else
+        flash[:notice] = "Kategorin finns redan"
+        redirect(:"/admin")
+        end
+        redirect(:"/admin")
+    end
+
+    # Deletes an already existing advert for the admin. Redirects to advertisements '/annonser'
+    #
+    # @param [Integer] id The advertisement id
+    # @param [Hash] db The database
+    def post_admindelete(id,db)
+        db.execute("DELETE FROM advertisement WHERE id = ?",id)
+        db.execute("DELETE FROM ad_category_relation WHERE ad_id = ?",id)
+        redirect('/annonser')
+    end
+
+    # Deletes an already existing advert for the user and checks for authorization. Redirects to landing page '/'
+    #
+    # @param [Hash] db The database
+    # @param [Integer] id The advertisement id
+    # @param [Integer] user_id The users id
+    def post_advertisementdelete(id,user_id,db)
+        user_advert_id = db.execute("SELECT user_id FROM advertisement WHERE id = ?", id).first
+        if user_advert_id.nil? || user_id != user_advert_id[0]
+            redirect('/')
+        end
+        db.execute("DELETE FROM advertisement WHERE id = ?",id)
+        db.execute("DELETE FROM ad_category_relation WHERE ad_id = ?",id)
+        redirect('/')
+    end
+
+
+    # Shows a advertisement editing form for an already existing advertisement for the admin. 
+    #
+    # @param [Hash] db The database
+    # @param [Integer] id The advertisement id
+    def get_adminadvertisementedit(id,db)
+        result_genre = db.execute("SELECT * FROM category")
+        result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
+        slim(:"/advertisement/edit",locals:{result:result,category:result_genre})
+    end
+
+    # Shows a advertisement from the admin page 
+    #
+    # @param [Hash] db The database
+    # @param [Integer] id The advertisement id
+    def get_adminadvertisementid(id,db)
+        result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
+        result_user = db.execute("SELECT username FROM user WHERE id IN (SELECT user_id FROM advertisement WHERE id = ?)",id).first
+        slim(:"advertisement/show",locals:{result:result,result_user:result_user})
+    end
+
+
+    # Shows a form for making new advertisements
+    #
+    # @param [Hash] db The database
+    def get_newadvertisement(db)
+        result = db.execute("SELECT * FROM category")
+        slim(:"advertisement/new",locals:{category:result})
+    end
+
+    # Shows the advertisement information for a already existing advertisement
+    #
+    # @param [Hash] db The database
+    # @param [Integer] id The advertisement id
+    def get_advertisementid(id,db)
+        result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
+        result_user = db.execute("SELECT username FROM user WHERE id IN (SELECT user_id FROM advertisement WHERE id = ?)",id).first
+        slim(:"advertisement/show",locals:{result:result,result_user:result_user})
+    end
+    
+    # Shows a advertisement editing form for a already existing advertisement. Checks for authorization. Redirects to landing page '/' 
+    #
+    # @param [Hash] db The database
+    # @param [Integer] id The advertisement id
+    # @param [Integer] user_id The users id
+    def get_advertisementedit(id,db,user_id)
+        user_advert_id = db.execute("SELECT user_id FROM advertisement WHERE id = ?", id).first
+        if user_advert_id.nil? || user_id != user_advert_id[0]
+            redirect('/')
+        end
+        result_genre = db.execute("SELECT * FROM category")
+        result = db.execute("SELECT * FROM advertisement WHERE id = ?",id).first
+        slim(:"/advertisement/edit",locals:{result:result,category:result_genre})
+    end
+
+
+    # Shows every advertisement inside the admin panel. 
+    #
+    # @param [Hash] db The database
+    def get_adminadvertisement(db)
+        result = db.execute("SELECT * FROM advertisement")
+        slim(:"admin/admin_index",locals:{advertisement:result})
+    end
+
+    # Shows every advertisement on the website with the option to filter advertisement based on categories.  
+    #
+    # @param [Hash] db The database
+    # @param [Integer] genre The advertisement genre value id
+    def get_advertisement(genre,db)
+        result = db.execute("SELECT * FROM advertisement")
+        result_genre = db.execute("SELECT * FROM category")
+        if genre != 0 
+            result_filter = db.execute("SELECT * FROM ((ad_category_relation 
+                INNER JOIN advertisement ON ad_category_relation.ad_id = advertisement.id) 
+                INNER JOIN category ON ad_category_relation.category_id = category.id)  
+                WHERE category_id = ? OR category_id2 = ?",genre,genre)
+        else
+            result_filter = db.execute("SELECT * FROM ad_category_relation INNER JOIN advertisement on ad_category_relation.ad_id = advertisement.id")
+        end
+        slim(:"advertisement/index",locals:{advertisement:result,category:result_genre,advert_filter:result_filter})
+    end
+    
+
+    # Shows every advertisement that a specific user has.
+    #
+    # @param [Hash] db The database
+    # @param [Integer] id The users id 
+    def personal_advertisement(id,db)
+        result = db.execute("SELECT * FROM advertisement WHERE user_id = ? ",id)
+        slim(:"advertisement/personal_index",locals:{advertisement:result})
     end
 
 end
