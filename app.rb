@@ -128,17 +128,12 @@ get('/annonser') do
     result = db.execute("SELECT * FROM advertisement")
     result_genre = db.execute("SELECT * FROM category")
     if genre != 0 
-        puts "Genre is not 0. Genre: #{genre}"
         result_filter = db.execute("SELECT * FROM ((ad_category_relation 
             INNER JOIN advertisement ON ad_category_relation.ad_id = advertisement.id) 
             INNER JOIN category ON ad_category_relation.category_id = category.id)  
             WHERE category_id = ? OR category_id2 = ?",genre,genre)
-
-        puts "Result filter: #{result_filter.inspect}"
     else
-        puts "Genre is 0. Fetching all advertisements."
         result_filter = db.execute("SELECT * FROM ad_category_relation INNER JOIN advertisement on ad_category_relation.ad_id = advertisement.id")
-        puts "Result filter: #{result_filter.inspect}"
     end
     slim(:"advertisement/index",locals:{advertisement:result,category:result_genre,advert_filter:result_filter})
 end
@@ -304,11 +299,3 @@ post('/advertisement/new') do
     db = database()
     post_advertcheck(title,description,price,user_id,genre,genre2,db)
 end
-
-
-
-
-
-
-#db.last_insert_rowid()
-#db.last_insert_row_id()
