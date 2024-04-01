@@ -23,6 +23,11 @@ before do
     before_all()
 end
 
+error 404 do
+    flash[:notice] = "Routen existerar inte"
+    redirect('/')
+end
+
 
 # Displays landing page
 #
