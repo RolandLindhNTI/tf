@@ -11,10 +11,6 @@ enable :sessions
 
 include Model
 
-
-# Runs before every route is being ran, checks login cooldowns and authorization
-# 
-# @see Model#before_all    
 before do
     if session[:timeout_arr] == nil
         session[:timeout_arr] = []

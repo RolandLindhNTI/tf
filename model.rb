@@ -118,7 +118,7 @@ require 'bcrypt'
         end
     end
 
-    # Creates a new user and checks uses error-handling to prevent misinputs in the database. Redirects to '/'
+    # Creates a new user and checks inputs, uses error-handling to prevent misinputs in the database. Redirects to '/'ssss
     #
     # @param [String] char Containing each forbidden character one by one
     # @param [String] password The users password
